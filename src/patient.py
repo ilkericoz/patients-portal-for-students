@@ -32,8 +32,8 @@ class Patient:
         # Initialize a new patient with basic details and generate unique identifiers and timestamps.
         self.patient_id = str(uuid.uuid4())
         self.name = name
-        self.age = self._validate_age(age)
-        self.gender = self._validate_gender(gender)
+        self.age = self.validate_age(age)
+        self.gender = self.validate_gender(gender)
         self.checkin = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.checkout = None
         self.ward = None
@@ -41,13 +41,13 @@ class Patient:
         # This flag helps to determine if the patient is being registered for the first time.
         self.is_new = True
 
-    def _validate_gender(self, gender):
+    def validate_gender(self, gender):
         if gender not in GENDERS:
             raise ValueError(
                 f"Invalid gender: {gender}. Valid options are: {', '.join(GENDERS)}")
         return gender
 
-    def _validate_age(self, age):
+    def validate_age(self, age):
         if not isinstance(age, int) or age <= 0:
             raise ValueError(
                 f"Invalid age: {age}. Age must be a positive integer.")
