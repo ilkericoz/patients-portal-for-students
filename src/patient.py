@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 import requests
+from config import *
 
 
 """
@@ -24,36 +25,66 @@ There should be a method to commit that patient to the database using the api_co
 
 
 class Patient:
-
+    # API URL for accessing the patient data.
     API_URL = 'http://127.0.0.1:5000/patients'
 
     def __init__(self, name, gender, age):
-
+        # Initialize a new patient with basic details and generate unique identifiers and timestamps.
         self.patient_id = str(uuid.uuid4())
         self.name = name
-        self.age = age
-        self.gender = gender
+        self.age = self._validate_age(age)
+        self.gender = self._validate_gender(gender)
         self.checkin = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.checkout = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.checkout = None
         self.ward = None
         self.room = None
-
+        # This flag helps to determine if the patient is being registered for the first time.
         self.is_new = True
 
-    def set_room(self, room):
+    def _validate_gender(self, gender):
+        if gender not in GENDERS:
+            raise ValueError(
+                f"Invalid gender: {gender}. Valid options are: {', '.join(GENDERS)}")
+        return gender
 
-        if not isinstance(room, int):
-            raise ValueError("Room must be an integer.")
+    def _validate_age(self, age):
+        if not isinstance(age, int) or age <= 0:
+            raise ValueError(
+                f"Invalid age: {age}. Age must be a positive integer.")
+        else:
+            return age
+
+    def set_room(self, room):
+        # Set the room number for the patient with proper validation.
+        if not isinstance(room, int):  # Assuming room has been formatted like "Ward1"
+            raise ValueError("Room should be int.")
+
+        if not any(str(room) in rooms for rooms in ROOM_NUMBERS.values()):
+            raise ValueError(
+                f"Room {room} does not exist in ward {self.ward}.")
+
         self.room = room
 
     def set_ward(self, ward):
-
-        if not isinstance(ward, int):
-            raise ValueError("Ward must be an integer.")
+        # Set the ward number for the patient with proper validation.
+        if not isinstance(ward, int) or ward not in WARD_NUMBERS:
+            raise ValueError("Ward doesn't exist. Please select a valid ward.")
         self.ward = ward
 
-    def to_dict(self):
+    def get_id(self):
+        return self.patient_id
 
+    def get_name(self):
+        return self.name
+
+    def get_ward(self):
+        return self.ward
+
+    def get_room(self):
+        return self.room
+
+    def to_dict(self):
+        # Convert the patient information into a dictionary aligning with the database schema.
         return {
             "patient_id": self.patient_id,
             "patient_name": self.name,
@@ -66,10 +97,10 @@ class Patient:
         }
 
     def commit(self):
-        url = f"{self.API_URL}/{self.patient_id}" if not self.is_new else self.API_URL
+        url = f"http://127.0.0.1:5000/patient/{self.patient_id}" if not self.is_new else self.API_URL
         method = requests.put if not self.is_new else requests.post
         payload = self.to_dict()
-        print("Final payload being sent:", payload)
+        print("Final payload being sent:", payload)  # Debugging statement
 
         response = method(url, json=payload)
 
@@ -78,7 +109,7 @@ class Patient:
             return response.json()
         else:
             raise Exception(
-                f"Failed to commit patient: {response.content.decode('utf-8')}")
+                f"Failed to commit patient: {response.content.decode('utf-8')} {response.status_code}")
 
     def __repr__(self):
         return f"<Patient {self.patient_id} | {self.name}>"
